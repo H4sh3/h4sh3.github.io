@@ -40,7 +40,7 @@ setup = () => {
 
 draw = () => {
 
-    
+
     if (run) {
         const updates = calcUpdate(field)
         updates.map(c => {
@@ -50,7 +50,7 @@ draw = () => {
         analytics(iter)
         drawField(field)
         drawMenu()
-    }    
+    }
 }
 
 
@@ -63,6 +63,7 @@ analytics = (iter) => {
         if (iter > 0) {
             if (score > bestField.score) {
                 bestField.score = score
+                // add deep copy for initial field
                 bestField.field = field
             }
 
@@ -72,21 +73,20 @@ analytics = (iter) => {
         }
         score = 0
 
+        field = resetField()
         if (runBest) {
             field = bestField.field
         } else {
-            field = resetField()
+
+            const cPos = []
+            cPos.push(center())
+
+            // add new entry
+            scoreLog.push({ pos: cPos, score: 0 })
+            cPos.map(position => {
+                addCluster(random(["red", "blue"]), position, 15)
+            })
         }
-
-        const cPos = []
-        cPos.push(center())
-
-
-        // add new entry
-        scoreLog.push({ pos: cPos, score: 0 })
-        cPos.map(position => {
-            addCluster(random(["red", "blue"]), position, 15)
-        })
 
     }
 
@@ -336,12 +336,11 @@ drawMenu = () => {
 
     stroke(255)
     fill(0)
-    text(`run ${run}`, 100, 100)
-    text(`Framerate: ${fRate}`, frameRatePlus.x + 30, frameRatePlus.y + 15)
-
+    rect(90, 0, 250, 110)
     stroke(0)
     fill(0)
-
+    
+    
     rect(100, 0, 250, 30)
     const progress = Math.floor((iter % 250) / 2.5)
     rect(100, 33, 250, 30)
@@ -351,7 +350,11 @@ drawMenu = () => {
     text(`Iteration: ${progress}`, 100, 60)
     text(`Score:    ${score}`, 100, 10)
     text(`BestScore:    ${bestField.score}`, 100, 25)
-
+    
+    
+    text(`Run ${run}`, 100, 80)
+    text(`Run Best ${runBest}`, 100, 100)
+    text(`Framerate: ${fRate}`, frameRatePlus.x + 30, frameRatePlus.y + 15)
     pop()
 
 }
