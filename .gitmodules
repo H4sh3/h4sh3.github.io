@@ -4,6 +4,3 @@
 [submodule "genetic-rocket"]
 	path = genetic-rocket
 	url = git@github.com:H4sh3/genetic-rocket.git
-[submodule "GameOfLife"]
-	path = GameOfLife
-	url = git@github.com:H4sh3/GameOfLife.git
