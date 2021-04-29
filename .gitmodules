@@ -1,6 +1,3 @@
-[submodule "simple-shader"]
-	path = simple-shader
-	url = https://github.com/H4sh3/simple-shader
 [submodule "game-of-life"]
 	path = game-of-life
 	url = git@github.com:H4sh3/game-of-life.git
