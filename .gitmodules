@@ -7,3 +7,6 @@
 [submodule "game-of-life"]
 	path = game-of-life
 	url = git@github.com:H4sh3/game-of-life.git
+[submodule "ml-driver"]
+	path = ml-driver
+	url = git@github.com:H4sh3/ml-driver.git
