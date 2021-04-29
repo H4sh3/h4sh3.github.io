@@ -1,0 +1,3 @@
+[submodule "simple-shader"]
+	path = simple-shader
+	url = https://github.com/H4sh3/simple-shader
