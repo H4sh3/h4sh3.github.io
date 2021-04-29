@@ -10,3 +10,6 @@
 [submodule "ml-driver"]
 	path = ml-driver
 	url = git@github.com:H4sh3/ml-driver.git
+[submodule "physarum"]
+	path = physarum
+	url = git@github.com:H4sh3/physarum.git
