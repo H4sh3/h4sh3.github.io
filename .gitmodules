@@ -16,3 +16,6 @@
 [submodule "simple-shader"]
 	path = simple-shader
 	url = git@github.com:H4sh3/simple-shader.git
+[submodule "rl-maze"]
+	path = rl-maze
+	url = git@github.com:H4sh3/rl-maze.git
