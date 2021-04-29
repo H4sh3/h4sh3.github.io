@@ -13,3 +13,6 @@
 [submodule "physarum"]
 	path = physarum
 	url = git@github.com:H4sh3/physarum.git
+[submodule "sorting"]
+	path = sorting
+	url = git@github.com:H4sh3/sorting.git
