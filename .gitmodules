@@ -13,3 +13,6 @@
 [submodule "genetic-rocket"]
 	path = genetic-rocket
 	url = git@github.com:H4sh3/genetic-rocket.git
+[submodule "simple-shader"]
+	path = simple-shader
+	url = git@github.com:H4sh3/simple-shader.git
