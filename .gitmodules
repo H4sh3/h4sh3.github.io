@@ -13,3 +13,6 @@
 [submodule "sorting"]
 	path = sorting
 	url = git@github.com:H4sh3/sorting.git
+[submodule "genetic-rocket"]
+	path = genetic-rocket
+	url = git@github.com:H4sh3/genetic-rocket.git
