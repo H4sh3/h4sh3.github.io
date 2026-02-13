@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenRouter Pack Results Viewer</title>
+  <style>
+    :root {
+      --bg: #f3efe7;
+      --bg-accent: #e6efe5;
+      --card: #fffdf8;
+      --ink: #1b1a17;
+      --muted: #5a564f;
+      --line: #d8d0c4;
+      --ok: #1f7a45;
+      --bad: #9b1c1c;
+      --warn: #915b00;
+      --chip: #f5efe2;
+      --blue: #2b5f8a;
+      --teal: #2f7e78;
+      --gold: #8a6a2b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 500px at 5% -10%, #fff8df 0%, transparent 60%),
+        radial-gradient(900px 400px at 95% 0%, #e0efe2 0%, transparent 55%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-accent) 100%);
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .wrap { max-width: 1280px; margin: 0 auto; display: grid; gap: 16px; }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .head {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+    h1 { margin: 0; font-size: 1.2rem; }
+    .muted { color: var(--muted); font-size: 0.92rem; }
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    select, input[type="text"], button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font: inherit;
+    }
+    button { background: #1f2d3d; color: #fff; border-color: #1f2d3d; cursor: pointer; }
+    .stats {
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .stat { background: var(--chip); border-radius: 12px; padding: 10px; border: 1px solid #e8dece; }
+    .k { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; }
+    .v { font-size: 1.3rem; font-weight: 700; margin-top: 3px; }
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 12px;
+      padding: 14px 18px;
+    }
+    .chart-box { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: #fff; }
+    .chart-title { font-size: 0.85rem; color: var(--muted); margin-bottom: 8px; }
+    canvas { width: 100%; height: 240px; display: block; }
+    .table-wrap { overflow: auto; max-height: 64vh; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: #f9f4ec;
+      z-index: 2;
+      font-size: 0.8rem;
+      letter-spacing: 0.45px;
+      text-transform: uppercase;
+      color: #4d4943;
+    }
+    td.scenario { min-width: 520px; white-space: normal; line-height: 1.35; }
+    td.reason { min-width: 360px; white-space: normal; line-height: 1.35; }
+    .ok { color: var(--ok); font-weight: 700; }
+    .bad { color: var(--bad); font-weight: 700; }
+    .warn { color: var(--warn); font-weight: 700; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      background: var(--chip);
+      border: 1px solid #e8dece;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 0.78rem;
+      color: #4f4a41;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="panel">
+      <div class="head">
+        <div>
+          <h1>OpenRouter Pack Viewer</h1>
+          <div class="muted">Source: <code id="sourceLabel">openrouter_pack_results_best5x10.json</code></div>
+        </div>
+        <div class="controls">
+          <input id="pathInput" type="text" value="openrouter_pack_results_best5x10.json" size="42" />
+          <button id="loadBtn">Load</button>
+        </div>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="charts">
+        <div class="chart-box">
+          <div class="chart-title">Model Composite Score</div>
+          <canvas id="scoreChart" width="560" height="240"></canvas>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">Decision Rate by Model</div>
+          <canvas id="decisionChart" width="560" height="240"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="head">
+        <div>
+          <strong>Leaderboard</strong>
+          <div class="muted">score = 0.5 * decision + 0.3 * constraints + 0.2 * valid</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Model</th><th>Release</th><th>Cases</th><th>Valid Rate</th><th>Decision Rate</th><th>Constraint Avg</th><th>Avg Latency (ms)</th><th>Score</th>
+            </tr>
+          </thead>
+          <tbody id="leaderBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="head">
+        <div>
+          <strong>Raw Rows</strong>
+          <div class="muted">Now includes full scenario prompt/description.</div>
+        </div>
+        <div class="controls">
+          <select id="modelFilter"><option value="">All models</option></select>
+          <select id="scenarioFilter"><option value="">All scenarios</option></select>
+          <label class="muted"><input type="checkbox" id="failOnly" /> failures only</label>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Scenario</th><th>Model</th><th>Valid</th><th>Walk</th><th>Expected</th><th>Correct</th><th>Constraint</th><th>Latency</th><th>Error</th><th>Reasoning</th>
+            </tr>
+          </thead>
+          <tbody id="rowsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let allRows = [];
+    let cachedLeaderboard = [];
+    const scenarioPrompts = new Map();
+
+    const statsEl = document.getElementById('stats');
+    const leaderBody = document.getElementById('leaderBody');
+    const rowsBody = document.getElementById('rowsBody');
+    const modelFilter = document.getElementById('modelFilter');
+    const scenarioFilter = document.getElementById('scenarioFilter');
+    const failOnly = document.getElementById('failOnly');
+    const pathInput = document.getElementById('pathInput');
+    const sourceLabel = document.getElementById('sourceLabel');
+
+    const scoreChart = document.getElementById('scoreChart');
+    const decisionChart = document.getElementById('decisionChart');
+
+    const pct = (v) => `${(v * 100).toFixed(1)}%`;
+    const asBoolText = (v) => v === true ? 'true' : (v === false ? 'false' : 'null');
+    const shortModel = (id) => (id && id.includes('/')) ? id.split('/').slice(1).join('/') : (id || '');
+
+    function isValid(row) {
+      return Boolean(row.output_valid) && Boolean(row.response_text);
+    }
+
+    function aggregate(rows) {
+      const byModel = new Map();
+      for (const row of rows) {
+        const model = row.model || '';
+        if (!byModel.has(model)) {
+          byModel.set(model, {
+            model,
+            release: row.release_date || '',
+            cases: 0,
+            valid: 0,
+            correct: 0,
+            constraintSum: 0,
+            latencySum: 0,
+            latencyCount: 0,
+          });
+        }
+        const acc = byModel.get(model);
+        acc.cases += 1;
+        if (isValid(row)) acc.valid += 1;
+        if (row.decision_correct === true) acc.correct += 1;
+        if (typeof row.constraint_score === 'number') acc.constraintSum += row.constraint_score;
+        if (typeof row.latency_ms === 'number') {
+          acc.latencySum += row.latency_ms;
+          acc.latencyCount += 1;
+        }
+      }
+
+      const result = [];
+      for (const acc of byModel.values()) {
+        const validRate = acc.valid / acc.cases;
+        const decisionRate = acc.correct / acc.cases;
+        const constraintAvg = acc.constraintSum / acc.cases;
+        const latencyAvg = acc.latencyCount ? acc.latencySum / acc.latencyCount : null;
+        const score = (0.5 * decisionRate) + (0.3 * constraintAvg) + (0.2 * validRate);
+        result.push({
+          model: acc.model,
+          release: acc.release,
+          cases: acc.cases,
+          validRate,
+          decisionRate,
+          constraintAvg,
+          latencyAvg,
+          score,
+        });
+      }
+
+      result.sort((a, b) => b.score - a.score || b.decisionRate - a.decisionRate || (a.latencyAvg || 1e12) - (b.latencyAvg || 1e12));
+      return result;
+    }
+
+    function renderStats(rows) {
+      const total = rows.length;
+      const valid = rows.filter(isValid).length;
+      const correct = rows.filter((r) => r.decision_correct === true).length;
+      const avgConstraint = total ? rows.reduce((s, r) => s + (typeof r.constraint_score === 'number' ? r.constraint_score : 0), 0) / total : 0;
+
+      statsEl.innerHTML = `
+        <div class="stat"><div class="k">Rows</div><div class="v">${total}</div></div>
+        <div class="stat"><div class="k">Valid Rate</div><div class="v">${pct(valid / (total || 1))}</div></div>
+        <div class="stat"><div class="k">Decision Rate</div><div class="v">${pct(correct / (total || 1))}</div></div>
+        <div class="stat"><div class="k">Constraint Avg</div><div class="v">${avgConstraint.toFixed(2)}</div></div>
+      `;
+    }
+
+    function drawBars(canvas, labels, values, color, max = 1) {
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const pad = { top: 14, right: 10, bottom: 36, left: 150 };
+      const innerW = w - pad.left - pad.right;
+      const innerH = h - pad.top - pad.bottom;
+      const rowH = labels.length ? innerH / labels.length : innerH;
+
+      ctx.font = '12px IBM Plex Sans, sans-serif';
+      ctx.fillStyle = '#4d4943';
+
+      labels.forEach((label, i) => {
+        const y = pad.top + i * rowH + 6;
+        const barH = Math.max(12, rowH - 10);
+        const val = Math.max(0, values[i] || 0);
+        const bw = Math.max(0, Math.min(innerW, (val / max) * innerW));
+
+        ctx.fillStyle = '#ece5d9';
+        ctx.fillRect(pad.left, y, innerW, barH);
+
+        ctx.fillStyle = color;
+        ctx.fillRect(pad.left, y, bw, barH);
+
+        ctx.fillStyle = '#2f2d2a';
+        ctx.fillText(label.slice(0, 28), 8, y + barH - 2);
+        ctx.fillText((max === 1 ? `${(val * 100).toFixed(1)}%` : val.toFixed(3)), pad.left + bw + 6, y + barH - 2);
+      });
+    }
+
+    function renderCharts(leaderboard) {
+      const labels = leaderboard.map((r) => shortModel(r.model));
+      drawBars(scoreChart, labels, leaderboard.map((r) => r.score), '#2b5f8a', 1);
+      drawBars(decisionChart, labels, leaderboard.map((r) => r.decisionRate), '#2f7e78', 1);
+    }
+
+    function renderLeaderboard(rows) {
+      const agg = aggregate(rows);
+      cachedLeaderboard = agg;
+      leaderBody.innerHTML = agg.map((r) => `
+        <tr>
+          <td><strong>${shortModel(r.model)}</strong></td>
+          <td>${r.release}</td>
+          <td>${r.cases}</td>
+          <td>${pct(r.validRate)}</td>
+          <td>${pct(r.decisionRate)}</td>
+          <td>${r.constraintAvg.toFixed(2)}</td>
+          <td>${r.latencyAvg ? r.latencyAvg.toFixed(2) : ''}</td>
+          <td><strong>${r.score.toFixed(3)}</strong></td>
+        </tr>
+      `).join('');
+      renderCharts(cachedLeaderboard);
+    }
+
+    function renderRows(rows) {
+      const model = modelFilter.value;
+      const scenario = scenarioFilter.value;
+      const failuresOnly = failOnly.checked;
+
+      const filtered = rows.filter((r) => {
+        if (model && r.model !== model) return false;
+        if (scenario && r.scenario_id !== scenario) return false;
+        if (failuresOnly && (isValid(r) && r.decision_correct === true)) return false;
+        return true;
+      });
+
+      rowsBody.innerHTML = filtered.map((r) => {
+        const valid = isValid(r);
+        const walk = r.output_json ? r.output_json.walk : null;
+        const reason = r.output_json && r.output_json.reasoning ? r.output_json.reasoning : '';
+        const err = r.output_error || r.error || '';
+        const miss = Array.isArray(r.missing_constraints) ? r.missing_constraints : [];
+        const scenarioPrompt = r.scenario_prompt || scenarioPrompts.get(r.scenario_id) || '';
+        return `
+          <tr>
+            <td class="scenario">
+              <div><strong>${r.scenario_id || ''}</strong> <span class="muted">${r.scenario_name || ''}</span></div>
+              <div class="muted">${scenarioPrompt}</div>
+            </td>
+            <td>${shortModel(r.model || '')}</td>
+            <td class="${valid ? 'ok' : 'bad'}">${valid}</td>
+            <td>${asBoolText(walk)}</td>
+            <td>${asBoolText(r.expected_walk)}</td>
+            <td class="${r.decision_correct ? 'ok' : 'bad'}">${r.decision_correct === true}</td>
+            <td>
+              <div>${typeof r.constraint_score === 'number' ? r.constraint_score.toFixed(2) : ''}</div>
+              ${miss.length ? `<div class="chips">${miss.map((m) => `<span class="chip">miss: ${m}</span>`).join('')}</div>` : ''}
+            </td>
+            <td>${typeof r.latency_ms === 'number' ? r.latency_ms.toFixed(2) : ''}</td>
+            <td class="${err ? 'warn' : ''}">${err}</td>
+            <td class="reason">${reason}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function populateFilters(rows) {
+      const models = [...new Set(rows.map((r) => r.model).filter(Boolean))].sort();
+      const scenarios = [...new Set(rows.map((r) => r.scenario_id).filter(Boolean))].sort();
+      modelFilter.innerHTML = '<option value="">All models</option>' + models.map((m) => `<option value="${m}">${shortModel(m)}</option>`).join('');
+      scenarioFilter.innerHTML = '<option value="">All scenarios</option>' + scenarios.map((s) => `<option value="${s}">${s}</option>`).join('');
+    }
+
+    async function loadFromPath(path) {
+      const res = await fetch(path, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function hydrateScenarioPrompts() {
+      if (scenarioPrompts.size) return;
+      const candidates = ['scenario_pack_top10.json', 'scenario_pack.json'];
+      for (const path of candidates) {
+        try {
+          const data = await loadFromPath(path);
+          if (Array.isArray(data)) {
+            for (const item of data) {
+              if (item && item.id && item.prompt && !scenarioPrompts.has(item.id)) {
+                scenarioPrompts.set(item.id, item.prompt);
+              }
+            }
+          }
+        } catch (_err) {
+          // optional fallback source
+        }
+      }
+    }
+
+    async function loadAndRender(path) {
+      const rows = await loadFromPath(path);
+      if (!Array.isArray(rows)) throw new Error('JSON must be an array');
+      await hydrateScenarioPrompts();
+      allRows = rows;
+      sourceLabel.textContent = path;
+      renderStats(allRows);
+      renderLeaderboard(allRows);
+      populateFilters(allRows);
+      renderRows(allRows);
+    }
+
+    document.getElementById('loadBtn').addEventListener('click', async () => {
+      try {
+        await loadAndRender(pathInput.value.trim());
+      } catch (err) {
+        alert(`Failed to load file: ${err.message}`);
+      }
+    });
+
+    modelFilter.addEventListener('change', () => renderRows(allRows));
+    scenarioFilter.addEventListener('change', () => renderRows(allRows));
+    failOnly.addEventListener('change', () => renderRows(allRows));
+
+    loadAndRender(pathInput.value.trim()).catch((err) => {
+      statsEl.innerHTML = `<div class="stat"><div class="k">Load error</div><div class="v bad">${err.message}</div></div>`;
+    });
+  </script>
+</body>
+</html>
